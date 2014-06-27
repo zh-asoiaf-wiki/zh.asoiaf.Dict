@@ -1,0 +1,20 @@
+{
+  "name": "zh.asoiaf.Dict",
+  "version": "0.0.1",
+  "description": "Grab page list from zh.asoiaf.wikia.com, fetch its zh-title & its en-title",
+  "main": "./index.js",
+  "dependencies": {
+    "nodemw": "*", 
+    "commander": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/chenchenyangll/zh.asoiaf.Dict.git"
+  },
+  "keywords": [
+    "zh.asoiaf"
+  ],
+  "author": "ChenYang Chen",
+  "license": "MIT", 
+  "readmeFilename": "README.md"
+}
