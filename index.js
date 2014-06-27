@@ -50,7 +50,15 @@ if (program.category) {
           }
         }
       }
-      console.log(res);
+      
+      var out = fs.createWriteStream('dict-' + program.category + '.txt');
+      for (var item in res) {
+        var line = res[item] + '#' + item + '\r\n';
+        out.write(line);
+      }
+      out.end(function() {
+        console.log('Done.');
+      });
     }
   });
 }
