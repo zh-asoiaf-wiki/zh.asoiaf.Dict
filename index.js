@@ -1,6 +1,6 @@
 var program = require('commander');
 program
-  .version('0.0.3')
+  .version('0.0.4')
   .option('-c --category <categoryName>', 'get zh-en records for pages of <categoryName> (without "Category:" prefix)')
   .option('-a --all', 'get zh-en records for all pages')
   .option('-f --format [format]', 'set output format: [simple|json]')
@@ -36,36 +36,79 @@ var read = function(data, res) {
 };
 
 var writeFile = function(res, filename) {
-  console.log('Start writing into file...');
-  var lineBreak = '\r\n'; // TODO: take care of line break
-  if (res.dict != undefined) {
-    var out = fs.createWriteStream(filename + '.txt');
-    for (var item in res.dict) {
-      var line = res.dict[item] + '#' + item + lineBreak;
-      out.write(line);
+  var format = (program.format) ? program.format : 'simple';
+  console.log('Start writing into file...' + format);
+  var genTimestamp = function() {
+    var addZero = function(num) {
+      return (num < 10) ? '0' + num : '' + num;
     }
-    out.end(function() {
-      console.log('Done.');
-    });
-  }
-  if (res.noen.length != 0) {
-    var out = fs.createWriteStream(filename + '-noen.txt');
-    for (var i = 0; i < res.noen.length; ++i) {
-      out.write(res.noen[i] + lineBreak);
+    var d = new Date();
+    return '' + d.getUTCFullYear() + addZero(d.getUTCMonth() + 1) + addZero(d.getUTCDate()) 
+      + addZero(d.getUTCHours()) + addZero(d.getUTCMinutes()) + addZero(d.getUTCSeconds());
+  };
+  if (format == 'simple') {
+    var lineBreak = '\r\n'; // TODO: take care of line break
+    if (res.dict != undefined) {
+      var out = fs.createWriteStream(filename + '.txt');
+      for (var item in res.dict) {
+        var line = res.dict[item] + '#' + item + lineBreak;
+        out.write(line);
+      }
+      out.end(function() {
+        console.log('Done.');
+      });
     }
-    out.end(function() {
-      console.log('Done.');
-    });
-  }
-  if (res.error != undefined) {
-    var out = fs.createWriteStream(filename + '-error.txt');
-    for (var item in res.error) {
-      var line = res.error[item] + '#' + item + lineBreak;
-      out.write(line);
+    if (res.noen.length != 0) {
+      var out = fs.createWriteStream(filename + '-noen.txt');
+      for (var i = 0; i < res.noen.length; ++i) {
+        out.write(res.noen[i] + lineBreak);
+      }
+      out.end(function() {
+        console.log('Done.');
+      });
     }
-    out.end(function() {
-      console.log('Done.');
-    });  
+    if (res.error != undefined) {
+      var out = fs.createWriteStream(filename + '-error.txt');
+      for (var item in res.error) {
+        var line = res.error[item] + '#' + item + lineBreak;
+        out.write(line);
+      }
+      out.end(function() {
+        console.log('Done.');
+      });  
+    }
+  } else if (format == 'json') {
+    var flip = function(o) {
+      if (o) {
+        var fo = {};
+        for (var key in o) {
+          fo[o[key]] = key;
+        }
+        return fo;
+      }
+    };
+    var jsonOutput = function(json, filename) {
+      var jsonStr = JSON.stringify(json);
+      var out = fs.createWriteStream(filename + '.json');
+      /* timestamp */
+      out.write('/* generated AT ' + genTimestamp() + ' UTC */');
+      out.write(jsonStr);
+      out.end(function() {
+        console.log('Done.');
+      });
+    };
+    if (res.dict != undefined) {
+      // flip dict...
+      var fdict = flip(res.dict);
+      jsonOutput(fdict, filename);
+    }
+    if (res.noen.length != 0) {
+      jsonOutput(res.noen, filename + '-noen');
+    }
+    if (res.error != undefined) {
+      var ferror = flip(res.error);
+      jsonOutput(ferror, filename + '-error');
+    }
   }
 };
 
