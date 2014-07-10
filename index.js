@@ -1,24 +1,14 @@
 var program = require('commander');
 program
-  .version('0.0.2')
-  .option('-c --category [categoryName]', 'category title (without "Category:" prefix)')
-  .option('-a --all', 'get all pages')
+  .version('0.0.3')
+  .option('-c --category <categoryName>', 'get zh-en records for pages of <categoryName> (without "Category:" prefix)')
+  .option('-a --all', 'get zh-en records for all pages')
+  .option('-f --format [format]', 'set output format: [simple|json]')
   .parse(process.argv);
 
 var bot = require('nodemw');
 var fs = require('fs');
 var client;
-if (fs.existsSync('config.js')) {
-  client = new bot('config.js');
-  console.log('Use config.js');
-} else {
-  client = new bot({
-    server: 'zh.asoiaf.wikia.com', 
-    path: '/', 
-    debug: true
-  });
-  console.log('Use temp config');
-}
 
 var read = function(data, res) {
   var pages = data.query.pages;
@@ -79,7 +69,7 @@ var writeFile = function(res, filename) {
   }
 };
 
-client.logIn(function() {
+var op = function(isBot) {
   if (program.all) {
     var res = {
       'dict': {}, 
@@ -89,9 +79,9 @@ client.logIn(function() {
     var allParams = {
       action: 'query', 
       generator: 'allpages', 
-      gaplimit: '1000', 
+      gaplimit: (isBot) ? '1000' : '100', 
       prop: 'langlinks', 
-      lllimit: '5000', 
+      lllimit: (isBot) ? '5000' : '500', 
       format: 'jsonfm'
     };
     
@@ -126,9 +116,9 @@ client.logIn(function() {
       action: 'query', 
       generator: 'categorymembers', 
       gcmtitle: 'Category:' + program.category, 
-      gcmlimit: '5000', 
+      gcmlimit: (isBot) ? '5000' : '500', 
       prop: 'langlinks', 
-      lllimit: '5000', 
+      lllimit: (isBot) ? '5000' : '500', 
       format: 'jsonfm'
     };
     
@@ -141,4 +131,23 @@ client.logIn(function() {
       }
     });
   }
-});
+};
+
+if (fs.existsSync('config.js')) {
+  client = new bot('config.js');
+  isBot = true;
+  console.log('Use config.js');
+  
+  client.logIn(function() {
+    op(true);
+  });
+} else {
+  client = new bot({
+    server: 'zh.asoiaf.wikia.com', 
+    path: '/', 
+    debug: true
+  });
+  console.log('Use temp config');
+  
+  op(false);
+}
