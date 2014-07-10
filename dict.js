@@ -5,10 +5,17 @@ function Dict(dict) {
   this.format = dict.format;
   this.isBot = false;
   if (dict.config) {
-    if (fs.existsSync(dict.config)) {
+    if (typeof dict.config == 'string') {
+      if (fs.existsSync(dict.config)) {
+        this.client = new bot(dict.config);
+        this.isBot = true;
+        console.log('Use config file [ ' + dict.config + ' ]');
+      }
+    } else if (typeof dict.config == 'object') {
       this.client = new bot(dict.config);
       this.isBot = true;
-      console.log('Use config file [ ' + dict.config + ' ]');
+      console.log('Use config via Object: ');
+      console.log(dict.config);
     }
   }
   if (this.isBot == false) {

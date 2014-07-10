@@ -1,6 +1,6 @@
 {
   "name": "zh.asoiaf.dict",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Grab page list from zh.asoiaf.wikia.com, fetch its zh-title & its en-title",
   "main": "./dict.js",
   "dependencies": {
