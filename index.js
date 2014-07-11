@@ -1,14 +1,17 @@
 var program = require('commander');
 program
   .version('0.0.6')
+  .option('-a --all', 'get zh-en records for all pages')  
   .option('-c --category <categoryName>', 'get zh-en records for pages of <categoryName> (without "Category:" prefix)')
-  .option('-a --all', 'get zh-en records for all pages')
-  .option('-f --format [format]', 'set output format: [simple|json]', 'json')
+  .option('-p --push [pushTitle]', 'push dict json up to wikia: [pushTitle] => MediaWiki:Common.js/dict by default')
+  .option('-f --format [format]', 'set output format: [simple|json], json by default')
   .parse(process.argv);
 
 var Dict = require('./dict.js');
 var dict = new Dict({ 
-  format: program.format, 
+  format: (program.push) 
+    ? 'json' 
+    : program.format || 'json', 
   /* either not set, */
   /* or */
   /* config: 'config.js' */
@@ -25,7 +28,10 @@ var dict = new Dict({
 
 if (program.all) {
   dict.getAll();
-} else if (program.category) {
+}
+if (program.category) {
   dict.getCategory(program.category);
-} else {
+}
+if (program.push) {
+  dict.push(program.push || 'MediaWiki:Common.js/dict');
 }

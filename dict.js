@@ -62,7 +62,17 @@ Dict.prototype.getCategory = function(categoryName) {
   }
 };
 
-var _getAll = function(client, isBot, format) {
+Dict.prototype.push = function(pushTitle) {
+  if (fs.existsSync('dict-all.json')) {
+    _push(pushTitle, this.client);
+  } else {
+    _getAll(this.client, this.isBot, this.format, function(res) {
+      _push(pushTitle, this.client);
+    });
+  }
+};
+
+var _getAll = function(client, isBot, format, callback) {
   var res = {
     'dict': {}, 
     'noen': [], 
@@ -77,10 +87,10 @@ var _getAll = function(client, isBot, format) {
     format: 'jsonfm'
   };
   
-  var callApi = function(allPagrams, callback) {
-    client.api.call(allParams, callback);
+  var callApi = function(allPagrams, apiCallback) {
+    client.api.call(allParams, apiCallback);
   };
-  var callback = function(info, next, data) {
+  var apiCallback = function(info, next, data) {
     if (!data.query) {
       console.log('Error or warning occured, plz check parameters again.');
     } else {
@@ -88,17 +98,19 @@ var _getAll = function(client, isBot, format) {
         read(data, res);
         console.log('query-continue');
         allParams.gapfrom = data['query-continue'].allpages.gapfrom;
-        callApi(allParams, callback);
+        callApi(allParams, apiCallback);
       } else {
         read(data, res);
         writeFile(res, 'dict-all', format);
+        
+        callback(res);
       }
     }    
   };
-  callApi(allParams, callback);
+  callApi(allParams, apiCallback);
 };
 
-var _getCategory = function(categoryName, client, isBot, format) {
+var _getCategory = function(categoryName, client, isBot, format, callback) {
   var res = {
     'dict': {}, 
     'noen': [], 
@@ -119,9 +131,19 @@ var _getCategory = function(categoryName, client, isBot, format) {
     if (!data.query) {
       console.log('Error or warning occured, plz check parameters again.');
     } else {
-      var dict = read(data, res);
-      writeFile(dict, 'dict-' + categoryName, format);
+      read(data, res);
+      writeFile(res, 'dict-' + categoryName, format);
+      
+      callback(res);
     }
+  });
+};
+
+var _push = function(pushTitle, client) {
+  var dict = require('./dict-all.json');
+  var content = JSON.stringify(dict);
+  client.edit(pushTitle, content, 'sync by zh.asoiaf.Dict.Sync', function(res) {
+    console.log(res);
   });
 };
 
