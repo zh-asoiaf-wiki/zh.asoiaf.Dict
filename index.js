@@ -20,13 +20,17 @@ program
   .command('all')
   .description('get zh-en records for all pages')
   .action(function() {
-    dict.getAll();
+    dict.getAll(function() {
+      console.log('getAll, FINISH.');
+    });
   });
 program
   .command('category <categoryName>')
   .description('get zh-en records for pages of <categoryName> (without "Category:" prefix)')
   .action(function(categoryName) {
-    dict.getCategory(categoryName);
+    dict.getCategory(categoryName, function() {
+      console.log('getCategory, FINISH.');
+    });
   });
 program
   .command('push [pushTitle]')
@@ -36,5 +40,5 @@ program
     dict.push(pushTitle);
   });
 program
-  .version('0.0.7')
+  .version('0.0.8')
   .parse(process.argv);

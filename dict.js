@@ -31,31 +31,31 @@ module.exports = (function() {
   };
     
   dict.prototype = {
-    getAll: function() {
+    getAll: function(callback) {
       if (this.isBot) {
         if (this.isLogin !== true) {
           var that = this;
           this.client.logIn(function() {
-            _getAll(that.client, that.isBot, that.format);
+            _getAll(that.client, that.isBot, that.format, callback);
             that.isLogin = true;
           });
           return;
         }
       }
-      _getAll(this.client, this.isBot, this.format);
+      _getAll(this.client, this.isBot, this.format, callback);
     }, 
-    getCategory: function(categoryName) {
+    getCategory: function(categoryName, callback) {
       if (this.isBot) {
         if (this.isLogin !== true) {
           var that = this;
           this.client.logIn(function() {
-            _getCategory(categoryName, that.client, that.isBot, that.format);
+            _getCategory(categoryName, that.client, that.isBot, that.format, callback);
             that.isLogin = true;
           });
           return;
         }
       }
-      _getCategory(categoryName, this.client, this.isBot, this.format);
+      _getCategory(categoryName, this.client, this.isBot, this.format, callback);
     }, 
     push: function(pushTitle) {
       if (fs.existsSync('dict-all.json')) {
