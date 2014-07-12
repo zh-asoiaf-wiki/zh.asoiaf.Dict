@@ -1,17 +1,6 @@
-var program = require('commander');
-program
-  .version('0.0.6')
-  .option('-a --all', 'get zh-en records for all pages')  
-  .option('-c --category <categoryName>', 'get zh-en records for pages of <categoryName> (without "Category:" prefix)')
-  .option('-p --push [pushTitle]', 'push dict json up to wikia: [pushTitle] => MediaWiki:Common.js/dict by default')
-  .option('-f --format [format]', 'set output format: [simple|json], json by default')
-  .parse(process.argv);
-
 var Dict = require('./dict.js');
 var dict = new Dict({ 
-  format: (program.push) 
-    ? 'json' 
-    : program.format || 'json', 
+  format: 'json', // and json only, ready to deprecate 'simple'
   /* either not set, */
   /* or */
   /* config: 'config.js' */
@@ -26,12 +15,26 @@ var dict = new Dict({
   }
 });
 
-if (program.all) {
-  dict.getAll();
-}
-if (program.category) {
-  dict.getCategory(program.category);
-}
-if (program.push) {
-  dict.push(program.push || 'MediaWiki:Common.js/dict');
-}
+var program = require('commander');
+program
+  .command('all')
+  .description('get zh-en records for all pages')
+  .action(function() {
+    dict.getAll();
+  });
+program
+  .command('category <categoryName>')
+  .description('get zh-en records for pages of <categoryName> (without "Category:" prefix)')
+  .action(function(categoryName) {
+    dict.getCategory(categoryName);
+  });
+program
+  .command('push [pushTitle]')
+  .description('push dict json up to wiki: 冰与火之歌:Dict by default')
+  .action(function(pushTitle) {
+    pushTitle = pushTitle || '冰与火之歌:Dict';
+    dict.push(pushTitle);
+  });
+program
+  .version('0.0.7')
+  .parse(process.argv);
