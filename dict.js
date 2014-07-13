@@ -57,9 +57,9 @@ module.exports = (function() {
       }
       _getCategory(categoryName, this.client, this.isBot, this.format, callback);
     }, 
-    push: function(pushTitle) {
+    push: function(pushTitle, callback) {
       if (fs.existsSync('dict-all.json')) {
-        _push(pushTitle, this.client);
+        _push(pushTitle, this.client, callback);
       } else {
         _getAll(this.client, this.isBot, this.format, function(res) {
           _push(pushTitle, this.client);
@@ -74,36 +74,76 @@ module.exports = (function() {
       'noen': [], 
       'error': {}
     };
-    var allParams = {
-      action: 'query', 
-      generator: 'allpages', 
-      gaplimit: (isBot) ? '1000' : '100', 
-      prop: 'langlinks', 
-      lllimit: (isBot) ? '5000' : '500'
+    var reqAll = {
+      params: {
+        action: 'query', 
+        generator: 'allpages', 
+        gaplimit: (isBot) ? '1000' : '100', 
+        prop: 'langlinks', 
+        lllimit: (isBot) ? '5000' : '500'
+      }, 
+      errCnt: 0, 
+      timeout: undefined
     };
-    
-    var callApi = function(allPagrams, apiCallback) {
-      client.api.call(allParams, apiCallback);
+    var log = function(info) {
+      console.log('[getAll] ' + info);
+    };    
+    var waitTimeout = function() {
+      if (reqAll.timeout) {
+        clearTimeout(reqAll.timeout);
+        reqAll.timeout = undefined;
+        var err = 'Timeout, try again...';
+        log(err);
+        callApi(err, apiCallback);
+      }
+    };    
+    var callApi = function(err, apiCallback) {
+      if (err) {
+        if (reqAll.errCnt > 3) {
+          log('Retry 3 times...FAILED.');
+          return;
+        } else {
+          reqAll.errCnt++;
+        }
+      } else {
+        reqAll.errCnt = 0;
+      }
+      client.api.call(reqAll.params, apiCallback); 
+      reqAll.timeout = setTimeout(waitTimeout, 10000); // wait for 10 seconds until TIMEOUT
     };
     var apiCallback = function(info, next, data) {
-      if (!data.query) {
-        console.log('Error or warning occured, plz check parameters again.');
-      } else {
-        if (data['query-continue'] != undefined) {
-          read(data, res);
-          console.log('query-continue');
-          allParams.gapfrom = data['query-continue'].allpages.gapfrom;
-          callApi(allParams, apiCallback);
+      if (!reqAll.timeout) { // timeout has been cleared, this callback is called after TIMEOUT, discard it
+        log('Callback returned after TIMEOUT, discard it...');
+        return;
+      }
+      clearTimeout(reqAll.timeout);
+      reqAll.timeout = undefined;
+      if (data) {
+        if (!data.query) {
+          var err = 'Error or warning occured, plz check parameters again.';
+          log(err);
+          callApi(err, apiCallback);
         } else {
-          read(data, res);
-          writeFile(res, 'dict-all', format);
-          if (callback) {
-            callback(res);
+          if (data['query-continue']) {
+            read(data, res);
+            console.log('[getAll] query-continue');
+            reqAll.params.gapfrom = data['query-continue'].allpages.gapfrom;
+            callApi('', apiCallback);
+          } else {
+            read(data, res);
+            writeFile(res, 'dict-all', format);
+            if (callback) {
+              callback(res);
+            }
           }
         }
-      }    
+      } else {
+        var err = '[getAll] No data received in this call, try again...';
+        console.log(err);
+        callApi(err, apiCallback);
+      }
     };
-    callApi(allParams, apiCallback);
+    callApi('', apiCallback);
   };
 
   var _getCategory = function(categoryName, client, isBot, format, callback) {
@@ -113,34 +153,60 @@ module.exports = (function() {
       'error': {}
     };  
     // TODO: cmcontinue
-    var categoryParams = {
-      action: 'query', 
-      generator: 'categorymembers', 
-      gcmtitle: 'Category:' + categoryName, 
-      gcmlimit: (isBot) ? '5000' : '500', 
-      prop: 'langlinks', 
-      lllimit: (isBot) ? '5000' : '500'
+    var reqCat = {
+      params: {
+        action: 'query', 
+        generator: 'categorymembers', 
+        gcmtitle: 'Category:' + categoryName, 
+        gcmlimit: (isBot) ? '5000' : '100', 
+        prop: 'langlinks', 
+        lllimit: (isBot) ? '5000' : '500'
+      }, 
+      errCnt: 0
     };
     
-    client.api.call(categoryParams, function(info, next, data) {
-      if (!data.query) {
-        console.log('Error or warning occured, plz check parameters again.');
-      } else {
-        read(data, res);
-        writeFile(res, 'dict-' + categoryName, format);
-        if (callback) {
-          callback(res);
+    var callApi = function(err, apiCallback) {
+      if (err) {
+        if (reqCat.errCnt > 3) {
+          console.log('[getCategory] Retry 3 times...FAILED.');
+          return;
+        } else {
+          reqCat.errCnt++;
         }
       }
-    });
+      client.api.call(reqCat.params, apiCallback);
+    };
+    var apiCallback = function(info, next, data) {
+      if (data) {
+        if (!data.query) {
+          var err = '[getCategory] Error or warning occured, plz check parameters again.';
+          console.log(err);
+          callApi(err, apiCallback);
+        } else {
+          read(data, res);
+          writeFile(res, 'dict-' + categoryName, format);
+          if (callback) {
+            callback(res);
+          }        
+        }
+      } else {
+        var err = '[getCategory] No data received in this call, try again...';
+        console.log(err);
+        callApi(err, apiCallback);
+      }
+    };
+    callApi('', apiCallback);
   };
 
-  var _push = function(pushTitle, client) {
+  var _push = function(pushTitle, client, callback) {
     var content = fs.readFileSync('./dict-all.json', { encoding: 'utf-8' });
     client.edit(pushTitle, content, 'sync by zh.asoiaf.Dict.Sync', function(res) {
       console.log(res);
+      if (callback) {
+        callback();
+      }
     });
-  };
+  };  
   /*
    * data: raw data get from api
    * res: dict object
