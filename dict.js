@@ -126,7 +126,7 @@ module.exports = (function() {
         } else {
           if (data['query-continue']) {
             read(data, res);
-            console.log('[getAll] query-continue');
+            log('query-continue');
             reqAll.params.gapfrom = data['query-continue'].allpages.gapfrom;
             callApi('', apiCallback);
           } else {
@@ -138,8 +138,8 @@ module.exports = (function() {
           }
         }
       } else {
-        var err = '[getAll] No data received in this call, try again...';
-        console.log(err);
+        var err = 'No data received in this call, try again...';
+        log(err);
         callApi(err, apiCallback);
       }
     };
@@ -162,25 +162,46 @@ module.exports = (function() {
         prop: 'langlinks', 
         lllimit: (isBot) ? '5000' : '500'
       }, 
-      errCnt: 0
+      errCnt: 0, 
+      timeout: undefined
     };
-    
+    var log = function(info) {
+      console.log('[getCategory] ' + info);
+    };    
+    var waitTimeout = function() {
+      if (reqCat.timeout) {
+        clearTimeout(reqCat.timeout);
+        reqCat.timeout = undefined;
+        var err = 'Timeout, try again...';
+        log(err);
+        callApi(err, apiCallback);
+      }
+    };    
     var callApi = function(err, apiCallback) {
       if (err) {
         if (reqCat.errCnt > 3) {
-          console.log('[getCategory] Retry 3 times...FAILED.');
+          log('Retry 3 times...FAILED.');
           return;
         } else {
           reqCat.errCnt++;
         }
+      } else {
+        reqCat.errCnt = 0;
       }
-      client.api.call(reqCat.params, apiCallback);
+      client.api.call(reqCat.params, apiCallback); 
+      reqCat.timeout = setTimeout(waitTimeout, 10000); // wait for 10 seconds until TIMEOUT
     };
     var apiCallback = function(info, next, data) {
+      if (!reqCat.timeout) { // timeout has been cleared, this callback is called after TIMEOUT, discard it
+        log('Callback returned after TIMEOUT, discard it...');
+        return;
+      }
+      clearTimeout(reqCat.timeout);
+      reqCat.timeout = undefined;
       if (data) {
         if (!data.query) {
-          var err = '[getCategory] Error or warning occured, plz check parameters again.';
-          console.log(err);
+          var err = 'Error or warning occured, plz check parameters again.';
+          log(err);
           callApi(err, apiCallback);
         } else {
           read(data, res);
@@ -190,8 +211,8 @@ module.exports = (function() {
           }        
         }
       } else {
-        var err = '[getCategory] No data received in this call, try again...';
-        console.log(err);
+        var err = 'No data received in this call, try again...';
+        log(err);
         callApi(err, apiCallback);
       }
     };
