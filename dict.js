@@ -57,12 +57,36 @@ module.exports = (function() {
       }
       _getCategory(categoryName, this.client, this.isBot, this.format, callback);
     }, 
+    /* push to MediaWiki/Common.js/dict */
     push: function(pushTitle, callback) {
       if (fs.existsSync('dict-all.json')) {
         _push(pushTitle, this.client, callback);
       } else {
+        var that = this;
         _getAll(this.client, this.isBot, this.format, function(res) {
-          _push(pushTitle, this.client);
+          _push(pushTitle, that.client, callback);
+        });
+      }
+    }, 
+    /* push to Template:zh-en */
+    pushZhEn: function(pushTitle, callback) {
+      if (fs.existsSync('res.json')) {
+        _pushZhEn(pushTitle, this.client, callback);
+      } else {
+        var that = this;      
+        _getAll(this.client, this.isBot, this.format, function(res) {
+          _pushZhEn(pushTitle, that.client, callback);
+        });
+      }
+    }, 
+    /* push to Template:en-zh */
+    pushEnZh: function(pushTitle, callback) {
+      if (fs.existsSync('res.json')) {
+        _pushEnZh(pushTitle, this.client, callback);
+      } else {
+        var that = this;      
+        _getAll(this.client, this.isBot, this.format, function(res) {
+          _pushEnZh(pushTitle, that.client, callback);
         });
       }
     }
@@ -228,6 +252,40 @@ module.exports = (function() {
       }
     });
   };  
+  var _pushZhEn = function(pushTitle, client, callback) {
+    var res = JSON.parse(fs.readFileSync('./res.json', { encoding: 'utf-8' }));
+    var crlf = '\r\n';
+    var content = '<includeonly>{{#switch: {{{1}}}' + crlf;
+    var dict = res.dict;
+    for (var item in dict) {
+      var line = ' | ' + item + ' = ' + dict[item] + crlf;
+      content += line;
+    }
+    content += ' | #default = {{{1}}}' + crlf + '}}' + crlf + '</includeonly>';
+    client.edit(pushTitle, content, 'sync by zh.asoiaf.Dict.Sync', function(res) {
+      console.log(res);
+      if (callback) {
+        callback();
+      }
+    });
+  };
+  var _pushEnZh = function(pushTitle, client, callback) {
+    var res = JSON.parse(fs.readFileSync('./res.json', { encoding: 'utf-8' }));
+    var crlf = '\r\n';
+    var content = '<includeonly>{{#switch: {{{1}}}' + crlf;
+    var dict = res.dict;
+    for (var item in dict) {
+      var line = ' | ' + dict[item] + ' = ' + item + crlf;
+      content += line;
+    }
+    content += ' | #default = {{{1}}}' + crlf + '}}' + crlf + '</includeonly>';
+    client.edit(pushTitle, content, 'sync by zh.asoiaf.Dict.Sync', function(res) {
+      console.log(res);
+      if (callback) {
+        callback();
+      }
+    });  
+  };
   /*
    * data: raw data get from api
    * res: dict object
@@ -332,6 +390,10 @@ module.exports = (function() {
     } else if (format == 'json') {
       writeJson();
     }
+    /* write res into file */
+    var resJsonStr = JSON.stringify(res);
+    fs.writeFileSync('res.json', resJsonStr);
+    console.log('res.json DONE.');
   };
   
   return dict;  
